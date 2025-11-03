@@ -70,4 +70,355 @@
           </div>
 
           <div id="feedback" aria-live="assertive"></div>
-          <div class="example-sentence
+          <div class="example-sentence" id="exampleSentence"></div>
+        </div>
+
+        <div class="footer">
+          <div class="controls">
+            <div class="mode-toggle">
+              <button class="btn" id="mcBtn" aria-pressed="true">Multiple choice</button>
+              <button class="btn" id="typeBtn" aria-pressed="false">Type answer</button>
+            </div>
+            <button class="btn" id="startBtn">Start</button>
+            <button class="btn" id="nextBtn" style="display:none">Next</button>
+          </div>
+
+          <div class="status">
+            <div class="pill">Score: <span id="score">0</span></div>
+            <div class="pill">Time left: <span id="timer">--</span></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel" aria-labelledby="lessonTitle">
+        <h3 id="lessonTitle">Lesson & Tips</h3>
+        <p class="small">Regular preterite endings:</p>
+        <ul class="small">
+          <li><strong>-ar</strong>: yo <code>é</code>, tú <code>aste</code>, él/ella <code>ó</code>, nosotros <code>amos</code>, vosotros <code>asteis</code>, ellos <code>aron</code></li>
+          <li><strong>-er / -ir</strong>: yo <code>í</code>, tú <code>iste</code>, él/ella <code>ió</code>, nosotros <code>imos</code>, vosotros <code>isteis</code>, ellos <code>ieron</code></li>
+        </ul>
+
+        <div style="margin-top:10px">
+          <label class="small">Difficulty:
+            <select id="difficulty" style="margin-left:6px;padding:6px;border-radius:8px;background:transparent;color:inherit">
+              <option value="easy">Easy (3 choices, 12s)</option>
+              <option value="normal" selected>Normal (4 choices, 10s)</option>
+              <option value="hard">Hard (5 choices, 8s)</option>
+            </select>
+          </label>
+        </div>
+
+        <hr style="opacity:0.06;margin:12px 0">
+
+        <div>
+          <strong>Verbs in this game</strong>
+          <div class="small" id="verbsList" style="margin-top:6px"></div>
+        </div>
+
+        <hr style="opacity:0.06;margin:12px 0">
+
+        <div class="small">
+          Keyboard tips: In multiple choice press number keys 1–5. In type mode press Enter to submit.
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:8px">
+          <button class="btn" id="resetBtn">Reset high score</button>
+          <button class="btn" id="explainBtn">Show conjugation rule</button>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="smallprint">
+      Built for GitHub Pages. To host: create a repo, add this file as <code>index.html</code>, push, then enable Pages from the main branch.
+    </footer>
+  </div>
+
+<script>
+/* =========================
+   Data and configuration
+   ========================= */
+const PRONOUNS = [
+  {key:'yo', idx:0}, {key:'tú', idx:1}, {key:'él/ella/usted', idx:2},
+  {key:'nosotros', idx:3}, {key:'vosotros', idx:4}, {key:'ellos/ellas/ustedes', idx:5}
+];
+
+// sample regular verbs (infinitive, translation, example sentence template)
+// keep only regular verbs; you can add more later
+const VERBS = [
+  {inf:'hablar', eng:'to speak', ex:'Ayer, yo {conj} con mi profesor.'},
+  {inf:'estudiar', eng:'to study', ex:'El miércoles él {conj} para el examen.'},
+  {inf:'comprar', eng:'to buy', ex:'Nosotros {conj} una mesa nueva.'},
+  {inf:'cantar', eng:'to sing', ex:'Ellos {conj} en la fiesta.'},
+  {inf:'comer', eng:'to eat', ex:'Tú {conj} una manzana.'},
+  {inf:'beber', eng:'to drink', ex:'Ella {conj} agua después del partido.'},
+  {inf:'vivir', eng:'to live', ex:'Ustedes {conj} en la ciudad.'},
+  {inf:'abrir', eng:'to open', ex:'Yo {conj} la ventana.'}
+];
+
+const ENDINGS = {
+  ar: ['é','aste','ó','amos','asteis','aron'],
+  er: ['í','iste','ió','imos','isteis','ieron'],
+  ir: ['í','iste','ió','imos','isteis','ieron']
+};
+
+/* =========================
+   UI helpers & state
+   ========================= */
+const el = id => document.getElementById(id);
+let state = {
+  mode: 'mc', // 'mc' or 'type'
+  running: false,
+  score: 0,
+  streak: 0,
+  highscore: Number(localStorage.getItem('preterite_highscore')||0),
+  current: null, // {verb, pronounIdx, correct, choices}
+  timer: null,
+  timeLeft: 0
+};
+
+el('highscore').textContent = state.highscore;
+el('verbsList').textContent = VERBS.map(v=>v.inf+' ('+v.eng+')').join(', ');
+
+/* =========================
+   Conjugation logic
+   ========================= */
+function getVerbType(inf) {
+  if (inf.endsWith('ar')) return 'ar';
+  if (inf.endsWith('er')) return 'er';
+  if (inf.endsWith('ir')) return 'ir';
+  return null;
+}
+function conjugatePreterite(inf, pronIdx) {
+  const type = getVerbType(inf);
+  if (!type) return null;
+  const stem = inf.slice(0, -2);
+  return stem + ENDINGS[type][pronIdx];
+}
+
+/* =========================
+   Game flow
+   ========================= */
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+function makeChoices(correct, verb, pronIdx, difficulty) {
+  const choices = new Set();
+  choices.add(correct);
+  // create distractors by altering endings or using correct endings for other verbs/pronouns
+  const maxDistractors = difficulty === 'hard' ? 4 : difficulty === 'normal' ? 3 : 2;
+  while (choices.size < 1 + maxDistractors) {
+    // random other pronoun of same verb
+    const altPron = Math.floor(Math.random()*6);
+    choices.add(conjugatePreterite(verb.inf, altPron));
+    if (choices.size >= 1 + maxDistractors) break;
+    // disturb by swapping endings from other verb type
+    const otherVerb = pickRandom(VERBS);
+    choices.add(conjugatePreterite(otherVerb.inf, (pronIdx + 1 + Math.floor(Math.random()*5))%6));
+  }
+  // turn into array and shuffle
+  const arr = Array.from(choices).filter(Boolean);
+  for (let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function newRound() {
+  const verb = pickRandom(VERBS);
+  const pron = pickRandom(PRONOUNS);
+  const correct = conjugatePreterite(verb.inf, pron.idx);
+  const difficulty = el('difficulty').value;
+  const choices = makeChoices(correct, verb, pron.idx, difficulty);
+  state.current = {verb, pronIdx: pron.idx, pronText: pron.key, correct, choices};
+  renderQuestion();
+  startTimer();
+}
+
+function startTimer(){
+  clearInterval(state.timer);
+  const diff = el('difficulty').value;
+  const base = diff === 'hard' ? 8 : diff === 'normal' ? 10 : 12;
+  state.timeLeft = base;
+  el('timer').textContent = state.timeLeft + 's';
+  state.timer = setInterval(()=>{
+    state.timeLeft--;
+    if (state.timeLeft<=0){
+      clearInterval(state.timer);
+      handleAnswer(null, true); // timed out
+    } else {
+      el('timer').textContent = state.timeLeft + 's';
+    }
+  }, 1000);
+}
+
+function stopTimer(){
+  clearInterval(state.timer);
+  el('timer').textContent = '--';
+}
+
+/* =========================
+   Rendering UI
+   ========================= */
+function renderQuestion(){
+  const cur = state.current;
+  el('questionText').textContent = `Conjugate "${cur.verb.inf}" in the preterite`;
+  el('infinitive').textContent = cur.verb.inf + ' — ' + cur.verb.eng;
+  el('pronounText').textContent = cur.pronText;
+  el('hintText').textContent = 'Form the preterite for the given pronoun.';
+
+  // example sentence placeholder
+  el('exampleSentence').textContent = '';
+
+  const area = el('interactiveArea');
+  area.innerHTML = '';
+
+  if (state.mode === 'mc') {
+    const container = document.createElement('div');
+    container.className = 'choices';
+    cur.choices.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.setAttribute('data-choice', c);
+      btn.innerHTML = `<strong>${i+1}.</strong> ${c}`;
+      btn.onclick = () => handleAnswer(c, false);
+      btn.addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleAnswer(c, false);
+      });
+      container.appendChild(btn);
+    });
+    area.appendChild(container);
+  } else {
+    const form = document.createElement('div');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'answerInput';
+    input.autocomplete = 'off';
+    input.placeholder = 'Type the conjugated verb (exact form) and press Enter';
+    input.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') handleAnswer(input.value.trim(), false);
+    });
+    form.appendChild(input);
+    const submit = document.createElement('button');
+    submit.className = 'btn';
+    submit.textContent = 'Submit';
+    submit.onclick = ()=> handleAnswer(input.value.trim(), false);
+    form.appendChild(submit);
+    area.appendChild(form);
+    setTimeout(()=>input.focus(),50);
+  }
+  el('feedback').innerHTML = '';
+  el('nextBtn').style.display = 'none';
+}
+
+/* =========================
+   Answer handling
+   ========================= */
+function handleAnswer(answer, timedOut){
+  stopTimer();
+  const cur = state.current;
+  const correct = cur.correct;
+  const feedbackEl = el('feedback');
+  el('nextBtn').style.display = 'inline-block';
+  if (timedOut || !answer || answer.toLowerCase() !== correct.toLowerCase()){
+    // wrong
+    state.streak = 0;
+    state.score = Math.max(0, state.score - 1);
+    feedbackEl.className = 'feedback bad';
+    feedbackEl.textContent = '✖ Incorrect. Correct: ' + correct;
+    // example sentence fill
+    el('exampleSentence').textContent = cur.verb.ex.replace('{conj}', correct);
+    updateUI();
+  } else {
+    // correct
+    state.streak++;
+    state.score += 2;
+    feedbackEl.className = 'feedback good';
+    feedbackEl.textContent = '✔ Correct! ' + correct;
+    // example sentence fill
+    el('exampleSentence').textContent = cur.verb.ex.replace('{conj}', correct);
+    updateUI();
+  }
+  // save highscore
+  if (state.score > state.highscore) {
+    state.highscore = state.score;
+    localStorage.setItem('preterite_highscore', String(state.highscore));
+    el('highscore').textContent = state.highscore;
+  }
+  // disable interactive inputs
+  Array.from(document.querySelectorAll('.choice')).forEach(b => b.disabled = true);
+  const inp = el('answerInput');
+  if (inp) inp.disabled = true;
+  state.running = false;
+}
+
+function updateUI(){
+  el('score').textContent = state.score;
+  el('streak').textContent = state.streak;
+}
+
+/* =========================
+   Controls & events
+   ========================= */
+el('mcBtn').addEventListener('click', ()=>{
+  state.mode = 'mc';
+  el('mcBtn').setAttribute('aria-pressed','true');
+  el('typeBtn').setAttribute('aria-pressed','false');
+});
+el('typeBtn').addEventListener('click', ()=>{
+  state.mode = 'type';
+  el('typeBtn').setAttribute('aria-pressed','true');
+  el('mcBtn').setAttribute('aria-pressed','false');
+});
+
+el('startBtn').addEventListener('click', ()=>{
+  state.running = true;
+  state.score = 0;
+  state.streak = 0;
+  updateUI();
+  newRound();
+});
+
+el('nextBtn').addEventListener('click', ()=>{
+  if (state.running) return;
+  state.running = true;
+  newRound();
+});
+
+el('difficulty').addEventListener('change', ()=> {
+  // no-op for now
+});
+
+el('resetBtn').addEventListener('click', ()=>{
+  if (confirm('Reset high score?')) {
+    localStorage.removeItem('preterite_highscore');
+    state.highscore = 0;
+    el('highscore').textContent = 0;
+  }
+});
+
+el('explainBtn').addEventListener('click', ()=>{
+  alert('Rule: remove -ar/-er/-ir and add the preterite endings.\n\n-ar: é, aste, ó, amos, asteis, aron\n-er/-ir: í, iste, ió, imos, isteis, ieron');
+});
+
+/* keyboard shortcuts for MC choices */
+document.addEventListener('keydown', (e)=>{
+  if (!state.current) return;
+  const activeChoices = document.querySelectorAll('.choice:not([disabled])');
+  if (activeChoices.length && /^[1-5]$/.test(e.key)) {
+    const idx = Number(e.key)-1;
+    if (idx < activeChoices.length) {
+      activeChoices[idx].click();
+    }
+  }
+});
+
+/* init UI with empty state */
+updateUI();
+
+/* Provide small accessibility focus for initial instructions */
+el('hintText').setAttribute('tabindex', '-1');
+
+</script>
+</body>
+</html>

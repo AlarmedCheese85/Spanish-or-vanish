@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Preterite Hero — Spanish Regular Verbs</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#60a5fa; --good:#22c55e; --bad:#ef4444; --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.03);
+      --radius:12px;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color-scheme: dark;
+    }
+    html,body{height:100%; margin:0; background: radial-gradient(1200px 700px at 10% 20%, rgba(37,99,235,0.08), transparent), var(--bg); color:#e6eef8;}
+    .wrap{max-width:980px;margin:28px auto;padding:20px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); box-shadow: 0 6px 24px rgba(2,6,23,0.6);}
+    header{display:flex;align-items:center;gap:16px}
+    h1{margin:0;font-size:22px}
+    .sub{color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns: 1fr 360px; gap:18px; margin-top:18px}
+    .panel{background:var(--card);padding:16px;border-radius:var(--radius);box-shadow: inset 0 1px 0 rgba(255,255,255,0.02)}
+    .big-card{padding:26px; min-height:360px; display:flex;flex-direction:column; justify-content:space-between; gap:14px}
+    .question{font-size:20px; font-weight:600}
+    .pronoun{font-size:18px;color:var(--accent); font-weight:700}
+    .example{font-size:14px;color:var(--muted); margin-top:8px}
+    .choices{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    button.choice{padding:10px 12px;border-radius:10px;border:2px solid rgba(255,255,255,0.03);background:var(--glass);color:inherit;cursor:pointer;font-weight:600}
+    button.choice:focus{outline:3px solid rgba(96,165,250,0.16)}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{background:rgba(255,255,255,0.03);padding:8px 10px;border-radius:999px;font-weight:700}
+    .footer{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .score{font-size:18px;font-weight:800}
+    .small{font-size:13px;color:var(--muted)}
+    .mode-toggle{display:flex;gap:8px}
+    .btn{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;font-weight:700}
+    .btn.primary{background:linear-gradient(180deg,var(--accent), #4f46e5); color:#061126;}
+    .status{display:flex;gap:8px;align-items:center}
+    .timer{font-weight:800}
+    input[type="text"]{padding:12px;border-radius:10px;border:none;background:rgba(255,255,255,0.03); color:inherit; font-size:16px; width:100%}
+    .feedback{padding:10px;border-radius:10px;margin-top:10px;font-weight:700}
+    .feedback.good{background:linear-gradient(90deg, rgba(34,197,94,0.12), rgba(34,197,94,0.04)); color:var(--good)}
+    .feedback.bad{background:linear-gradient(90deg, rgba(239,68,68,0.12), rgba(239,68,68,0.04)); color:var(--bad)}
+    .example-sentence{font-style:italic;color:var(--muted); margin-top:8px}
+    footer.smallprint{margin-top:14px;color:var(--muted);font-size:13px}
+    @media (max-width:900px){ .grid{ grid-template-columns: 1fr; } .panel{padding:12px} .big-card{min-height:320px} }
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main">
+    <header>
+      <div>
+        <h1>Preterite Hero — Regular Spanish Verbs</h1>
+        <div class="sub">Practice forming the preterite (pretérito) for regular -ar, -er, -ir verbs</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div class="small">High score: <span id="highscore">0</span></div>
+        <div class="small">Streak: <span id="streak">0</span></div>
+      </div>
+    </header>
+
+    <div class="grid" aria-live="polite">
+      <div class="panel big-card" id="gamePanel">
+        <div>
+          <div class="question" id="questionText">Ready?</div>
+          <div class="small">Infinitive: <span id="infinitive" style="font-weight:800"></span> — <span class="pronoun" id="pronounText"></span></div>
+          <div class="example" id="hintText">Select a mode and press Start.</div>
+
+          <div id="interactiveArea" style="margin-top:14px">
+            <!-- choices or input appear here -->
+          </div>
+
+          <div id="feedback" aria-live="assertive"></div>
+          <div class="example-sentence

@@ -124,6 +124,7 @@
         <div style="margin-top:12px; display:flex; gap:8px">
           <button class="btn" id="resetBtn">Reset high score</button>
           <button class="btn" id="explainBtn">Show conjugation rule</button>
+          <button class="btn" id="cheatBtn">Show Cheat Sheet</button>
         </div>
       </aside>
     </div>
@@ -131,6 +132,30 @@
     <footer class="smallprint">
       Built for GitHub Pages. To host: create a repo, add this file as <code>index.html</code>, push, then enable Pages from the main branch.
     </footer>
+  </div>
+
+  <!-- CHEAT SHEET MODAL -->
+  <div id="cheatModal" style="
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.7);
+    justify-content:center; align-items:center;
+    z-index:9999;
+  ">
+    <div style="
+      background:#0b1220;
+      padding:20px;
+      border-radius:12px;
+      box-shadow:0 0 20px rgba(0,0,0,0.6);
+      max-width:90%;
+      max-height:90%;
+      overflow:auto;
+      text-align:center;
+    ">
+      <img src="chart.png" alt="Preterite Cheat Sheet" style="max-width:100%; height:auto; border-radius:8px;">
+      <div style="margin-top:10px;">
+        <button class="btn primary" id="closeCheat">Close</button>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -419,6 +444,24 @@ updateUI();
 /* Provide small accessibility focus for initial instructions */
 el('hintText').setAttribute('tabindex', '-1');
 
+/* =========================
+   Cheat Sheet Modal Logic (ADDED)
+   ========================= */
+const cheatModal = document.getElementById('cheatModal');
+const cheatBtn = document.getElementById('cheatBtn');
+const closeCheat = document.getElementById('closeCheat');
+
+if (cheatBtn && cheatModal && closeCheat) {
+  cheatBtn.addEventListener('click', () => {
+    cheatModal.style.display = 'flex';
+  });
+  closeCheat.addEventListener('click', () => {
+    cheatModal.style.display = 'none';
+  });
+  cheatModal.addEventListener('click', (e) => {
+    if (e.target === cheatModal) cheatModal.style.display = 'none';
+  });
+}
 </script>
 </body>
 </html>

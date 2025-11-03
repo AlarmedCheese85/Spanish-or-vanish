@@ -97,6 +97,7 @@
           <li><strong>-ar</strong>: yo <code>é</code>, tú <code>aste</code>, él/ella <code>ó</code>, nosotros <code>amos</code>, vosotros <code>asteis</code>, ellos <code>aron</code></li>
           <li><strong>-er / -ir</strong>: yo <code>í</code>, tú <code>iste</code>, él/ella <code>ió</code>, nosotros <code>imos</code>, vosotros <code>isteis</code>, ellos <code>ieron</code></li>
         </ul>
+        <p class="small"><em>Note:</em> “Vosotros” forms only appear in <strong>Hard mode</strong>.</p>
 
         <div style="margin-top:10px">
           <label class="small">Difficulty:
@@ -251,10 +252,18 @@ function makeChoices(correct, verb, pronIdx, difficulty) {
 
 function newRound() {
   const verb = pickRandom(VERBS);
-  const pron = pickRandom(PRONOUNS);
-  const correct = conjugatePreterite(verb.inf, pron.idx);
   const difficulty = el('difficulty').value;
+
+  // Only include "vosotros" in hard mode
+  let availablePronouns = [...PRONOUNS];
+  if (difficulty !== 'hard') {
+    availablePronouns = availablePronouns.filter(p => p.key !== 'vosotros');
+  }
+
+  const pron = pickRandom(availablePronouns);
+  const correct = conjugatePreterite(verb.inf, pron.idx);
   const choices = makeChoices(correct, verb, pron.idx, difficulty);
+
   state.current = {verb, pronIdx: pron.idx, pronText: pron.key, correct, choices};
   renderQuestion();
   startTimer();
